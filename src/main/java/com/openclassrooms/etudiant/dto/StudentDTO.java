@@ -4,10 +4,12 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Data
-public class LoginRequestDTO {
+public class StudentDTO {
     @NotBlank
-    private String login;
+    private String firstName;
     @NotBlank
-    private String password;
+    private String lastName;
+    @NotBlank
+    private String email;
 
 }
