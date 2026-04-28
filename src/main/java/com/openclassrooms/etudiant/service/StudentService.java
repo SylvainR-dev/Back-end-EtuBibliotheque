@@ -22,6 +22,13 @@ public class StudentService {
     public Student create(Student student) {
         Assert.notNull(student, "Student must not be null");
         log.info("Creating new student");
+
+
+        Optional<Student> optionalStudent = studentRepository.findByEmail(student.getEmail());
+            if (optionalStudent.isPresent()) {
+                throw new IllegalArgumentException("Student with email " + student.getEmail() + " already exists");
+        }
+
         return studentRepository.save(student);
     }
 
@@ -31,6 +38,7 @@ public class StudentService {
     }
 
     public Optional<Student> getById(Long id) {
+        Assert.notNull(id, "Id must not be null");
         log.info("Getting student by id");
         return studentRepository.findById(id);
     }
