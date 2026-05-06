@@ -55,6 +55,7 @@ public class StudentControllerTest {
 
     }
 
+// Ici c'est un action à réaliser après chaque test pour supprimer les données ajoutées dans la BDD
     @AfterEach
     public void afterEach() {
         studentRepository.deleteAll();
@@ -62,21 +63,23 @@ public class StudentControllerTest {
 
     @Test
     public void createStudentWithoutRequiredData() throws Exception {
-        // GIVEN
+        // GIVEN : simule le fait d'ajouter des champs vide de l'étudiant. 
         StudentDTO studentDTO = new StudentDTO();
 
-        // WHEN
+        // WHEN simule une requête http post pour publier
         mockMvc.perform(MockMvcRequestBuilders.post(URL)
                         .content(objectMapper.writeValueAsString(studentDTO))
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
                 .andDo(print())
+                //THEN renvoie une erreur
                 .andExpect(MockMvcResultMatchers.status().isBadRequest());
     }
 
     @Test
     public void createAlreadyExistStudent() throws Exception {
-        // GIVEN
+        // GIVEN créer un étudiant avec les vrais valeurs, et créé aussi un étudiant existant avec les mêmes valeurs (DTO)
+        // email est l'unique élément qui identifie un étudiant. Il peut y avoir le même nom et prénom
         Student student = new Student();
         student.setFirstName(FIRST_NAME);
         student.setLastName(LAST_NAME);
@@ -88,12 +91,13 @@ public class StudentControllerTest {
         studentDTO.setLastName(LAST_NAME);
         studentDTO.setEmail(EMAIL);
 
-        // WHEN
+        // WHEN simule une requête http post pour publier la création de l'étudiant. 
         mockMvc.perform(MockMvcRequestBuilders.post(URL)
                         .content(objectMapper.writeValueAsString(studentDTO))
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
                 .andDo(print())
+                // THEN renvoie l'erreur. 
                 .andExpect(MockMvcResultMatchers.status().isBadRequest());
     }
 
@@ -119,7 +123,7 @@ public class StudentControllerTest {
         // GIVEN - Pas besoin de given ici, je veux juste la liste 
 
 
-        // WHEN - ici changer le post pas GET pour obtenir et mettre isOk. 
+        // WHEN - ici changer le post par GET pour obtenir et mettre isOk. 
         mockMvc.perform(MockMvcRequestBuilders.get(URL)
                         .accept(MediaType.APPLICATION_JSON))
                 .andDo(print())
@@ -184,3 +188,4 @@ public class StudentControllerTest {
                 .andExpect(MockMvcResultMatchers.status().isNoContent());
     }
 }
+// terminal : mvn test -Dtest=StudentControllerTest

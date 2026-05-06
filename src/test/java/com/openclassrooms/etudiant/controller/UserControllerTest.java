@@ -22,11 +22,17 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 
+// Ici c'est un test d'intégration, car cela concerne l'user (l'admin). On fait le lien avec user mais
+// aussi la base de donnée. Je vois @Testcontainers qui fait le lien avec la BDD. 
+// SpringBootTest sert à chercher l'environnement de test avec spring boot grâce aussi  l'ajout d'import en haut. 
+// @AutoConfigureMockMvc configure spécifiquement MockMvc
+
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
 @Testcontainers
 public class UserControllerTest {
 
+// final = constante immuable accessible uniquement dans cette classe. Ne peut pas être modifiée
     private static final String URL = "/api/register";
     private static final String FIRST_NAME = "John";
     private static final String LAST_NAME = "Doe";
@@ -34,9 +40,11 @@ public class UserControllerTest {
     private static final String PASSWORD = "password";
 
 
+// on initialise une nouvelle base de donnée pour ce test. Le latest et l'image récupéré. 
     @Container
     static MySQLContainer mySQLContainer = new MySQLContainer("mysql:latest");
 
+// ici c'est faire en sorte de créer les objets directement
     @Autowired
     private UserService userService;
     @Autowired
@@ -46,6 +54,7 @@ public class UserControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
+// c'est configurer la base de donnée en prenant en compte les élements précédents
     @DynamicPropertySource
     static void configureTestProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", () -> mySQLContainer.getJdbcUrl());
@@ -55,6 +64,7 @@ public class UserControllerTest {
 
     }
 
+// cela sert à effectuer cette action après chaque test. de supprimer toute information de l'user de la base de donnée.
     @AfterEach
     public void afterEach() {
         userRepository.deleteAll();
@@ -62,21 +72,23 @@ public class UserControllerTest {
 
     @Test
     public void registerUserWithoutRequiredData() throws Exception {
-        // GIVEN
+        // GIVEN j'instancie un registerDTO vide, 
         RegisterDTO registerDTO = new RegisterDTO();
 
-        // WHEN
+        // WHEN je simule une requête HTTP POST vers /api/register
         mockMvc.perform(MockMvcRequestBuilders.post(URL)
                         .content(objectMapper.writeValueAsString(registerDTO))
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
                 .andDo(print())
+                //THEN ici le but est que cela retour une erreur. 
                 .andExpect(MockMvcResultMatchers.status().isBadRequest());
     }
 
     @Test
     public void registerAlreadyExistUser() throws Exception {
-        // GIVEN
+        // GIVEN on crée un utilisateur complet et on l'enregistre vraiment en base. 
+        // Puis avec le dto on simule d'un utilisateur avec les mêmes données. 
         User user = new User();
         user.setFirstName(FIRST_NAME);
         user.setLastName(LAST_NAME);
@@ -90,30 +102,34 @@ public class UserControllerTest {
         registerDTO.setLogin(LOGIN);
         registerDTO.setPassword(PASSWORD);
 
-        // WHEN
+        // WHEN simule une requête HTTP POST avec le DTO du doublon
         mockMvc.perform(MockMvcRequestBuilders.post(URL)
                         .content(objectMapper.writeValueAsString(registerDTO))
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
                 .andDo(print())
+                //THEN retourne une erreur car l'utilisateur existe déja. 
                 .andExpect(MockMvcResultMatchers.status().isBadRequest());
     }
 
     @Test
     public void registerUserSuccessful() throws Exception {
-        // GIVEN
+        // GIVEN Je prépare un DTO complet avec toutes les données requises
         RegisterDTO registerDTO = new RegisterDTO();
         registerDTO.setFirstName(FIRST_NAME);
         registerDTO.setLastName(LAST_NAME);
         registerDTO.setLogin(LOGIN);
         registerDTO.setPassword(PASSWORD);
 
-        // WHEN
+        // WHEN puis je simule une requête http avec post
         mockMvc.perform(MockMvcRequestBuilders.post(URL)
                         .content(objectMapper.writeValueAsString(registerDTO))
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
                 .andDo(print())
+                //THEN retourne positif
                 .andExpect(MockMvcResultMatchers.status().isCreated());
     }
 }
+// Pour faire le test avec le terminal : mvn test -Dtest=UserControllerTest
+// global : mvn test jacoco:report
