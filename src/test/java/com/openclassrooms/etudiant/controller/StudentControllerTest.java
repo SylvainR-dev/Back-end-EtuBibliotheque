@@ -18,9 +18,6 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 
-// Test d'intégration avec MySQL via profil CI sur GitHub Actions
-// @WithMockUser simule un utilisateur authentifié pour passer Spring Security
-
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
 public class StudentControllerTest {
@@ -29,7 +26,6 @@ public class StudentControllerTest {
     private static final String FIRST_NAME = "John";
     private static final String LAST_NAME = "Doe";
     private static final String EMAIL = "exemple@mail.com";
-    private static final Long ID = 1L;
 
     @Autowired
     private StudentService studentService;
@@ -126,10 +122,10 @@ public class StudentControllerTest {
         student.setFirstName(FIRST_NAME);
         student.setLastName(LAST_NAME);
         student.setEmail(EMAIL);
-        studentService.create(student);
+        Student created = studentService.create(student);
 
-        // WHEN : simule une requête HTTP GET vers /api/students/1
-        mockMvc.perform(MockMvcRequestBuilders.get(URL + "/" + ID)
+        // WHEN : simule une requête HTTP GET avec l'ID réel
+        mockMvc.perform(MockMvcRequestBuilders.get(URL + "/" + created.getId())
                         .accept(MediaType.APPLICATION_JSON))
                 .andDo(print())
                 // THEN : retourne 200 OK
@@ -139,20 +135,20 @@ public class StudentControllerTest {
     @Test
     @WithMockUser
     public void updateStudentById() throws Exception {
-        // GIVEN : crée un étudiant en BDD et prépare le DTO
+        // GIVEN : crée un étudiant en BDD
         Student student = new Student();
         student.setFirstName(FIRST_NAME);
         student.setLastName(LAST_NAME);
         student.setEmail(EMAIL);
-        studentService.create(student);
+        Student created = studentService.create(student);
 
         StudentDTO studentDTO = new StudentDTO();
         studentDTO.setFirstName(FIRST_NAME);
         studentDTO.setLastName(LAST_NAME);
         studentDTO.setEmail(EMAIL);
 
-        // WHEN : simule une requête HTTP PUT vers /api/students/1
-        mockMvc.perform(MockMvcRequestBuilders.put(URL + "/" + ID)
+        // WHEN : simule une requête HTTP PUT avec l'ID réel
+        mockMvc.perform(MockMvcRequestBuilders.put(URL + "/" + created.getId())
                         .content(objectMapper.writeValueAsString(studentDTO))
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
@@ -169,10 +165,10 @@ public class StudentControllerTest {
         student.setFirstName(FIRST_NAME);
         student.setLastName(LAST_NAME);
         student.setEmail(EMAIL);
-        studentService.create(student);
+        Student created = studentService.create(student);
 
-        // WHEN : simule une requête HTTP DELETE vers /api/students/1
-        mockMvc.perform(MockMvcRequestBuilders.delete(URL + "/" + ID)
+        // WHEN : simule une requête HTTP DELETE avec l'ID réel
+        mockMvc.perform(MockMvcRequestBuilders.delete(URL + "/" + created.getId())
                         .accept(MediaType.APPLICATION_JSON))
                 .andDo(print())
                 // THEN : retourne 204 No Content
