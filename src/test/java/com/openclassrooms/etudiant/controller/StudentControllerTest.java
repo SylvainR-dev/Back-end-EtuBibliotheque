@@ -11,32 +11,28 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
-import org.testcontainers.containers.MySQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 
+// Test d'intégration avec H2 en mémoire — pas besoin de Docker
+// SpringBootTest charge le contexte Spring complet
+// @AutoConfigureMockMvc configure MockMvc pour simuler les requêtes HTTP
+
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
-@Testcontainers
 public class StudentControllerTest {
 
+    // final = constante immuable accessible uniquement dans cette classe
     private static final String URL = "/api/students";
     private static final String FIRST_NAME = "John";
     private static final String LAST_NAME = "Doe";
     private static final String EMAIL = "exemple@mail.com";
     private static final Long ID = 1L;
 
-
-    @Container
-    static MySQLContainer mySQLContainer = new MySQLContainer("mysql:latest");
-
+    // ici c'est faire en sorte de créer les objets directement
     @Autowired
     private StudentService studentService;
     @Autowired
@@ -46,16 +42,7 @@ public class StudentControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @DynamicPropertySource
-    static void configureTestProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", () -> mySQLContainer.getJdbcUrl());
-        registry.add("spring.datasource.username", () -> mySQLContainer.getUsername());
-        registry.add("spring.datasource.password", () -> mySQLContainer.getPassword());
-        registry.add("spring.jpa.hibernate.ddl-auto", () -> "create");
-
-    }
-
-// Ici c'est un action à réaliser après chaque test pour supprimer les données ajoutées dans la BDD
+    // cela sert à effectuer cette action après chaque test — supprimer les données ajoutées dans la BDD
     @AfterEach
     public void afterEach() {
         studentRepository.deleteAll();
@@ -63,23 +50,23 @@ public class StudentControllerTest {
 
     @Test
     public void createStudentWithoutRequiredData() throws Exception {
-        // GIVEN : simule le fait d'ajouter des champs vide de l'étudiant. 
+        // GIVEN : instancie un StudentDTO vide
         StudentDTO studentDTO = new StudentDTO();
 
-        // WHEN simule une requête http post pour publier
+        // WHEN : simule une requête HTTP POST vers /api/students
         mockMvc.perform(MockMvcRequestBuilders.post(URL)
                         .content(objectMapper.writeValueAsString(studentDTO))
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
                 .andDo(print())
-                //THEN renvoie une erreur
+                // THEN : renvoie une erreur
                 .andExpect(MockMvcResultMatchers.status().isBadRequest());
     }
 
     @Test
     public void createAlreadyExistStudent() throws Exception {
-        // GIVEN créer un étudiant avec les vrais valeurs, et créé aussi un étudiant existant avec les mêmes valeurs (DTO)
-        // email est l'unique élément qui identifie un étudiant. Il peut y avoir le même nom et prénom
+        // GIVEN : crée un étudiant avec les vraies valeurs en BDD
+        // email est l'unique élément qui identifie un étudiant
         Student student = new Student();
         student.setFirstName(FIRST_NAME);
         student.setLastName(LAST_NAME);
@@ -91,65 +78,66 @@ public class StudentControllerTest {
         studentDTO.setLastName(LAST_NAME);
         studentDTO.setEmail(EMAIL);
 
-        // WHEN simule une requête http post pour publier la création de l'étudiant. 
+        // WHEN : simule une requête HTTP POST avec le DTO du doublon
         mockMvc.perform(MockMvcRequestBuilders.post(URL)
                         .content(objectMapper.writeValueAsString(studentDTO))
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
                 .andDo(print())
-                // THEN renvoie l'erreur. 
+                // THEN : renvoie une erreur car l'étudiant existe déjà
                 .andExpect(MockMvcResultMatchers.status().isBadRequest());
     }
 
     @Test
     public void createStudentSuccessful() throws Exception {
-        // GIVEN - Aucune difficulté, il suffit de changer les register par student. 
+        // GIVEN : prépare un DTO complet avec toutes les données requises
         StudentDTO studentDTO = new StudentDTO();
         studentDTO.setFirstName(FIRST_NAME);
         studentDTO.setLastName(LAST_NAME);
         studentDTO.setEmail(EMAIL);
 
-        // WHEN
+        // WHEN : simule une requête HTTP POST
         mockMvc.perform(MockMvcRequestBuilders.post(URL)
                         .content(objectMapper.writeValueAsString(studentDTO))
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
                 .andDo(print())
+                // THEN : retourne positif
                 .andExpect(MockMvcResultMatchers.status().isCreated());
     }
 
     @Test
     public void getAllStudent() throws Exception {
-        // GIVEN - Pas besoin de given ici, je veux juste la liste 
+        // GIVEN : pas besoin de données, on veut juste la liste
 
-
-        // WHEN - ici changer le post par GET pour obtenir et mettre isOk. 
+        // WHEN : simule une requête HTTP GET vers /api/students
         mockMvc.perform(MockMvcRequestBuilders.get(URL)
                         .accept(MediaType.APPLICATION_JSON))
                 .andDo(print())
+                // THEN : retourne 200 OK
                 .andExpect(MockMvcResultMatchers.status().isOk());
     }
 
     @Test
     public void getStudentById() throws Exception {
-        // GIVEN - Reprendre les élements essentiels de Student comme dans le test Already
+        // GIVEN : crée un étudiant en BDD
         Student student = new Student();
         student.setFirstName(FIRST_NAME);
         student.setLastName(LAST_NAME);
         student.setEmail(EMAIL);
         studentService.create(student);
 
-
-        // WHEN - ici changer surtout le GET mais aussi URL avec le CHEMIN 
+        // WHEN : simule une requête HTTP GET vers /api/students/1
         mockMvc.perform(MockMvcRequestBuilders.get(URL + "/" + ID)
                         .accept(MediaType.APPLICATION_JSON))
                 .andDo(print())
+                // THEN : retourne 200 OK
                 .andExpect(MockMvcResultMatchers.status().isOk());
     }
 
     @Test
     public void updateStudentById() throws Exception {
-        // GIVEN - Reprendre les élements essentiels de Get Student
+        // GIVEN : crée un étudiant en BDD et prépare le DTO de modification
         Student student = new Student();
         student.setFirstName(FIRST_NAME);
         student.setLastName(LAST_NAME);
@@ -161,30 +149,30 @@ public class StudentControllerTest {
         studentDTO.setLastName(LAST_NAME);
         studentDTO.setEmail(EMAIL);
 
-
-        // WHEN - ici changer GET par PUT 
+        // WHEN : simule une requête HTTP PUT vers /api/students/1
         mockMvc.perform(MockMvcRequestBuilders.put(URL + "/" + ID)
                         .content(objectMapper.writeValueAsString(studentDTO))
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
                 .andDo(print())
+                // THEN : retourne 200 OK
                 .andExpect(MockMvcResultMatchers.status().isOk());
     }
 
     @Test
     public void deleteStudentById() throws Exception {
-        // GIVEN - Reprendre les élements essentiels de Student comme dans le test Already
+        // GIVEN : crée un étudiant en BDD
         Student student = new Student();
         student.setFirstName(FIRST_NAME);
         student.setLastName(LAST_NAME);
         student.setEmail(EMAIL);
         studentService.create(student);
 
-
-        // WHEN - ici changer surtout le GET mais aussi URL avec le CHEMIN 
+        // WHEN : simule une requête HTTP DELETE vers /api/students/1
         mockMvc.perform(MockMvcRequestBuilders.delete(URL + "/" + ID)
                         .accept(MediaType.APPLICATION_JSON))
                 .andDo(print())
+                // THEN : retourne 204 No Content
                 .andExpect(MockMvcResultMatchers.status().isNoContent());
     }
 }
