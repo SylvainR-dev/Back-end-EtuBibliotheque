@@ -10,6 +10,16 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: testdb
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
     steps:
       - uses: actions/checkout@v4
 
@@ -20,7 +30,4 @@ jobs:
           distribution: 'temurin'
 
       - name: Run tests
-        run: mvn test
-        env:
-          TESTCONTAINERS_RYUK_DISABLED: true
-          DOCKER_HOST: unix:///var/run/docker.sock
+        run: mvn test -Dspring.profiles.active=ci
