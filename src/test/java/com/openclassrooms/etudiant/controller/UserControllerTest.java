@@ -11,39 +11,26 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
-import org.testcontainers.containers.MySQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 
-// Test d'intégration avec Testcontainers — MySQL dans un container Docker
+// Test d'intégration avec MySQL via profil CI sur GitHub Actions
 // SpringBootTest charge le contexte Spring complet
 // @AutoConfigureMockMvc configure MockMvc pour simuler les requêtes HTTP
-// @Testcontainers gère le cycle de vie du container Docker
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
-@Testcontainers
 public class UserControllerTest {
 
-    // final = constante immuable accessible uniquement dans cette classe
     private static final String URL = "/api/register";
     private static final String FIRST_NAME = "John";
     private static final String LAST_NAME = "Doe";
     private static final String LOGIN = "login";
     private static final String PASSWORD = "password";
 
-    // on initialise une nouvelle base de données MySQL pour ce test
-    @Container
-    static MySQLContainer mySQLContainer = new MySQLContainer("mysql:latest");
-
-    // ici c'est faire en sorte de créer les objets directement
     @Autowired
     private UserService userService;
     @Autowired
@@ -53,16 +40,6 @@ public class UserControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    // configure la base de données en prenant en compte les éléments du container
-    @DynamicPropertySource
-    static void configureTestProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", () -> mySQLContainer.getJdbcUrl());
-        registry.add("spring.datasource.username", () -> mySQLContainer.getUsername());
-        registry.add("spring.datasource.password", () -> mySQLContainer.getPassword());
-        registry.add("spring.jpa.hibernate.ddl-auto", () -> "create");
-    }
-
-    // cela sert à effectuer cette action après chaque test — supprimer toute information de l'user de la base de données
     @AfterEach
     public void afterEach() {
         userRepository.deleteAll();
@@ -86,7 +63,6 @@ public class UserControllerTest {
     @Test
     public void registerAlreadyExistUser() throws Exception {
         // GIVEN : on crée un utilisateur complet et on l'enregistre vraiment en base
-        // Puis avec le DTO on simule un utilisateur avec les mêmes données
         User user = new User();
         user.setFirstName(FIRST_NAME);
         user.setLastName(LAST_NAME);
@@ -129,5 +105,3 @@ public class UserControllerTest {
                 .andExpect(MockMvcResultMatchers.status().isCreated());
     }
 }
-// Pour faire le test avec le terminal : mvn test -Dtest=UserControllerTest
-// global : mvn test jacoco:report
